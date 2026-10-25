@@ -1,0 +1,15 @@
+{
+  "app": {
+    "name": "book-class",
+    "url": "https://book-class-rho.vercel.app",
+    "stack": "정적 HTML"
+  },
+  "tracks": [
+    "security"
+  ],
+  "edzipCase": null,
+  "teacher": {
+    "dormsHandle": ""
+  },
+  "ownershipConfirmed": true
+}

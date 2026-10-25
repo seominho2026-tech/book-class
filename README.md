@@ -2,6 +2,12 @@
 
 빌드 없이 실행하는 HTML/CSS/JavaScript 독서 활동 앱입니다. Firebase Authentication과 서울 리전의 Cloud Firestore에 연결됩니다.
 
+공개 사이트: https://book-class-rho.vercel.app
+
+비공개 소스 저장소: https://github.com/seominho2026-tech/book-class
+
+학생에게는 공개 사이트 주소와 교사가 선택한 학급의 6자리 코드만 전달합니다. 기본 학급은 BOOK26이며, CC6UDL은 연동 검사 전용 학급입니다. 서버 실행 파일은 로컬 개발용이고 공개 사이트 이용에는 필요하지 않습니다.
+
 ## 사용하기
 
 Windows에서는 `start-book-class.cmd`를 더블클릭하면 로컬 서버를 시작하고 브라우저를 엽니다. Node.js가 설치되어 있어야 합니다. 컴퓨터를 재시작한 뒤에도 이 파일로 다시 실행하세요. `ERR_CONNECTION_REFUSED`가 뜨면 서버가 종료되었는지 확인하고 이 실행 파일을 다시 여세요.
@@ -28,7 +34,7 @@ Firebase 웹 연결 정보는 브라우저에 전달됩니다. 서비스 계정 
 
 ## GitHub Pages 배포
 
-앱 실행에 필요한 HTML/CSS/JS 파일 6개(index.html, styles.css, app.js, firebase-service.js, firebase-config.js, draft-storage.js)를 같은 폴더에 둡니다. 경로는 상대 경로이며 npm 설치나 빌드는 필요하지 않습니다. GitHub 저장소와 공개 URL은 아직 연결하지 않았습니다.
+앱 실행에 필요한 HTML/CSS/JS 파일 6개(index.html, styles.css, app.js, firebase-service.js, firebase-config.js, draft-storage.js)를 같은 폴더에 둡니다. 경로는 상대 경로이며 npm 설치나 빌드는 필요하지 않습니다. 현재는 GitHub main 브랜치를 Vercel의 book-class 프로젝트에 연결해 배포했습니다. .vercelignore와 vercel.json의 경로 제한으로 웹 실행 파일만 공개합니다.
 
 배포 주소가 정해지면 Firebase 콘솔 → Authentication → Settings → Authorized domains에 실제 Pages 도메인(예: 계정명.github.io)을 추가해야 Google 로그인이 동작합니다. 주소 경로는 넣지 않습니다. 공개 후에는 실제 주소에서 로그인, 학급 입장, 저장, 모바일 화면을 다시 확인해야 합니다.
 
@@ -53,6 +59,7 @@ Firebase 웹 연결 정보는 브라우저에 전달됩니다. 서비스 계정 
 - 자동 저장 검사: 1000ms 디바운스, 로컬 격리, 오프라인·재연결, 복구 승인·거절, 서버/저장소 실패, 제출 중 추가 입력 보존 등 15개 통과. `node tests/draft-workflow.mjs`로 재현합니다.
 - 실제 Firebase: 네 활동의 임시 저장과 최종 제출, KWLS 새로고침 복구, 제출 전 교사 비노출 및 제출 후 실시간 표시 확인. 새 보안 규칙도 적용했습니다. 실제 기기의 인터넷 차단 검사는 수행하지 않았으며 오프라인 동작은 자동 검사로 확인했습니다.
 - 테스트용 학급 `CC6UDL`(연동 확인용 테스트 학급)과 `연동검사 학생`, `임시저장 검사 학생` 기록은 확인용으로 남아 있습니다.
-- 공개 사이트 배포 및 실제 모바일 기기 검사는 아직 하지 않았습니다. 위 검사가 모든 보안을 보증하지는 않으며, 학교 전체 공개 전 운영 정책과 권한을 검토하세요.
+- Vercel 공개 주소 배포 및 Firebase 로그인 도메인 등록 완료. 비로그인 HTTP 200, 교사 Google 로그인과 제출물 조회, 비공개 파일 경로 404를 확인했습니다. 실제 모바일 기기와 학교 네트워크 검사는 남아 있습니다.
+- 도름스체크: 공개 화면 최소 점검 완료(확인 30건, 미확인 5건, 해당 없음 1건). 비밀 노출 미검출. API 키 권고 3건은 배포되지 않는 로컬 백업 2개와 공개 Firebase 웹 설정 1개입니다. CSP·Permissions-Policy·개인정보처리방침 등은 추가 검토 항목입니다. 이 검사가 모든 보안을 보증하지는 않습니다.
 
 규칙 테스트는 Java 21 이상과 Firebase CLI로 `firebase emulators:exec --only firestore --project demo-book-class --config firebase.test.json "node tests/firestore-access.mjs"`를 실행합니다. 별도 8085 포트에서 운영 데이터와 분리되어 실행됩니다. 운영 프로젝트에 이 테스트를 연결하지 마세요. 규칙 변경 전 백업은 `.private/firestore.rules.before-drafts`에 있습니다.

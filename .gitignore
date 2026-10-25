@@ -5,5 +5,6 @@
 *debug.log
 node_modules/
 .private/
+.dorms-check/
 .vercel
 .env*

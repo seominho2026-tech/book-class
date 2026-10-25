@@ -3,7 +3,7 @@
 - Firebase projectId: book-class-f5d7f
 - Firebase Web appId: 1:681923464310:web:1784dae729f03e102e6357
 - Firestore: (default), Standard, asia-northeast3 (서울)
-- GitHub 저장소: https://github.com/seominho2026-tech/book-class (비공개)
+- GitHub 저장소: https://github.com/seominho2026-tech/book-class (공개)
 - Supabase: 사용하지 않음
 - Vercel: smh-s-projects / book-class
 - Vercel projectId: prj_cNrGilTF1nc1O0LG42EE2u8su2jU

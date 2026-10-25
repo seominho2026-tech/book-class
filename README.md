@@ -4,9 +4,13 @@
 
 공개 사이트: https://book-class-rho.vercel.app
 
-비공개 소스 저장소: https://github.com/seominho2026-tech/book-class
+공개 소스 저장소: https://github.com/seominho2026-tech/book-class
 
 학생에게는 공개 사이트 주소와 교사가 선택한 학급의 6자리 코드만 전달합니다. 기본 학급은 BOOK26이며, CC6UDL은 연동 검사 전용 학급입니다. 서버 실행 파일은 로컬 개발용이고 공개 사이트 이용에는 필요하지 않습니다.
+
+## 다른 선생님이 복사해서 사용하기
+
+이 저장소의 Firebase 설정은 원래 운영 프로젝트를 가리킵니다. 독립적인 학급 앱을 운영하려면 본인의 Firebase 프로젝트를 만들고, firebase-config.js와 .firebaserc의 프로젝트 정보를 바꾸세요. firestore.rules와 firebase.json에 지정된 최초 관리자 이메일도 본인 계정에 맞게 바꾸고 보안 규칙을 배포해야 합니다. Google·이메일 로그인을 활성화하고 실제 배포 도메인을 Firebase Authentication의 허용 도메인에 등록하세요. 원래 프로젝트의 설정을 그대로 사용하면 별도 교사 관리자가 되지 않습니다.
 
 ## 사용하기
 

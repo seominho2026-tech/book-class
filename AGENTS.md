@@ -5,7 +5,10 @@
 - Firestore: (default), Standard, asia-northeast3 (서울)
 - GitHub 저장소: https://github.com/seominho2026-tech/book-class (비공개)
 - Supabase: 사용하지 않음
-- Vercel: smh-s-projects 팀에 book-class 배포 준비 중 (team_jWOKc9uPTAoRFeZxYePdneO3)
+- Vercel: smh-s-projects / book-class
+- Vercel projectId: prj_cNrGilTF1nc1O0LG42EE2u8su2jU
+- Vercel orgId: team_jWOKc9uPTAoRFeZxYePdneO3
+- Vercel은 기존 6개 웹 파일만 공개. .private, .env, .vercel, 로그는 Git 및 배포 제외.
 - HTML/CSS/JS 정적 배포. npm 설치나 앱 빌드 단계 없음.
 - 비밀 인증 자료, .env, .private, 디버그 로그를 Git에 포함하지 말 것.
 - firebase-config.js는 브라우저용 공개 연결 정보. 관리자 비밀 키를 넣지 말 것.

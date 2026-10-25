@@ -1,4 +1,4 @@
-import { cloud, startCloud, googleLogin, emailLogin, emailSignup, logoutCloud, joinClass, createClass, selectClass, setActiveActivity, saveActivity, retrySaves, recoverDrafts, submitActivity } from "./firebase-service.js";
+import { cloud, startCloud, googleLogin, emailLogin, emailSignup, logoutCloud, joinClass, createClass, selectClass, setActiveActivity, saveActivity, retrySaves, recoverDrafts, submitActivity, getTeacherInvite, redeemTeacherInvite, startOwnerPreview, leavePreview } from "./firebase-service.js";
 "use strict";
 console.log("book-class 앱이 준비되었습니다");
 const LETTERS = [..."ㄱㄴㄷㄹㅁㅂㅅㅇㅈㅊㅋㅌㅍㅎ"];
@@ -105,7 +105,7 @@ function showWord(word) {
 }
 function changeMode(teacher) {
   if (!cloud.profile || !cloud.classId || !students.length) return;
-  teacher = cloud.profile.role === "teacher";
+  teacher = cloud.profile.role === "preview" ? previewTeacher : cloud.profile.role === "teacher";
   teacherMode = teacher;
   $("#student-view").hidden = teacher || activeActivity !== "consonants"; $("#teacher-view").hidden = !teacher || activeActivity !== "consonants";
   $("#catapult-view").hidden = activeActivity !== "catapult";
@@ -206,7 +206,7 @@ let activeActivity = "consonants";
 let teacherMode = false;
 function completedNotes(student) {return CATAPULT.filter(({key}) => (student.notes[key] || "").trim().length > 0).length;}
 function persistNotes() { saveCurrentActivity("catapult"); }
-function updateSaveStatus() { $("#catapult-save-status").textContent = teacherMode ? "학생이 저장한 탐색 노트입니다." : "입력을 마치면 자동으로 저장합니다."; }
+function updateSaveStatus() { $("#catapult-save-status").textContent = cloud.profile?.role==='preview' ? "가상 예시 · 입력 내용은 저장되지 않습니다." : teacherMode ? "학생이 저장한 탐색 노트입니다." : "입력을 마치면 자동으로 저장합니다."; }
 function updateCatapultProgress(student) {
   const text=`${completedNotes(student)} / 8칸 작성 완료`;
   if ($("#catapult-progress").textContent !== text) $("#catapult-progress").textContent=text;
@@ -275,7 +275,7 @@ function raftSentence(draft) {
   return `나는 ${draft.role.trim() || "[역할]"}이 되어, ${draft.audience.trim() || "[청중]"}에게, ${draft.format.trim() || "[형식]"} 방식으로, ${draft.topic.trim() || "[주제]"}에 대해 씁니다.`;
 }
 function raftCharacterCount(text) {return Array.from(text).length;}
-function updateRaftStatus() { $("#raft-save-status").textContent = teacherMode ? "학생이 작성한 작품입니다." : "입력을 마치면 자동으로 저장합니다."; }
+function updateRaftStatus() { $("#raft-save-status").textContent = cloud.profile?.role==='preview' ? "가상 예시 · 입력 내용은 저장되지 않습니다." : teacherMode ? "학생이 작성한 작품입니다." : "입력을 마치면 자동으로 저장합니다."; }
 function persistRaft() { saveCurrentActivity("raft"); }
 function updateRaftSentence(draft) {$("#raft-sentence").textContent=raftSentence(draft);}
 function updateFormatChips(draft) {
@@ -347,7 +347,7 @@ function updateKwlsSummary(student) {
   const group=kwlsClassStats();
   $("#kwls-class-stats").textContent=`우리 반 ${students.length}명 · 활동 시작 ${group.started}명 · 작성 완료 ${group.completed}명`;
 }
-function updateKwlsSaveStatus() { $("#kwls-save-status").textContent = teacherMode ? "1칸 이상은 활동 시작, 4칸 모두 작성하면 완료입니다." : "공백·줄바꿈을 포함한 글자 수입니다. 입력을 마치면 자동 저장합니다."; }
+function updateKwlsSaveStatus() { $("#kwls-save-status").textContent = cloud.profile?.role==='preview' ? "가상 예시 · 입력 내용은 저장되지 않습니다." : teacherMode ? "1칸 이상은 활동 시작, 4칸 모두 작성하면 완료입니다." : "공백·줄바꿈을 포함한 글자 수입니다. 입력을 마치면 자동 저장합니다."; }
 function persistKwls() { saveCurrentActivity("kwls"); }
 function renderKwls() {
   const student=teacherMode ? students.find(s=>s.id===selectedStudent) || students[0] : students[0];
@@ -380,7 +380,7 @@ $("#kwls-select").addEventListener("change",event=>{selectedStudent=event.target
 // 실제 계정/학급과 기존 워크시트를 연결하는 화면 계층입니다.
 const activityToId={consonants:'act-1',catapult:'act-2',raft:'act-3',kwls:'act-4'};
 const idToActivity=Object.fromEntries(Object.entries(activityToId).map(([key,value])=>[value,key]));
-let hydrated=false,signupMode=false;
+let hydrated=false,signupMode=false,previewTeacher=true;
 const dirtyActivities=new Set();
 function showCloudError(error){
  const messages={'permission-denied':'접근 권한이 없습니다. 학급과 보안 규칙을 확인해 주세요.','auth/invalid-credential':'이메일 또는 비밀번호를 확인해 주세요.','auth/invalid-login-credentials':'이메일 또는 비밀번호를 확인해 주세요.','auth/email-already-in-use':'이미 가입한 이메일입니다. 로그인해 주세요.','auth/weak-password':'비밀번호는 6자 이상으로 입력해 주세요.','auth/popup-blocked':'팝업이 차단되었습니다. 이 사이트의 팝업을 허용해 주세요.','auth/popup-closed-by-user':'로그인 창이 닫혔습니다. 다시 시도해 주세요.','auth/unauthorized-domain':'Firebase 인증의 허용 도메인에 이 사이트를 등록해 주세요.','auth/operation-not-allowed':'Firebase 콘솔에서 해당 로그인 방식을 활성화해 주세요.','auth/too-many-requests':'요청이 많습니다. 잠시 후 다시 시도해 주세요.'};
@@ -397,6 +397,7 @@ function activityPayload(activity){
  return payload;
 }
 function saveCurrentActivity(activity){
+ if(cloud.profile?.role==='preview')return; // 체험 입력은 서버와 기기 저장소에 기록하지 않습니다.
  const payload=activityPayload(activity);if(!payload)return;
  dirtyActivities.add(activity);saveActivity(activity,payload);
 }
@@ -407,14 +408,17 @@ function clearSessionScreen(){
  ['student-board-name','progress','status','class-summary','catapult-student-name','catapult-progress','raft-student-name','raft-sentence','kwls-student-name','kwls-progress','kwls-class-stats','class-name','class-code','dialog-title'].forEach(id=>$('#'+id).textContent='');
  document.querySelectorAll('form').forEach(form=>form.reset());
  document.querySelectorAll('.error-banner').forEach(banner=>banner.textContent='');
- teacherMode=false;activeActivity='consonants';updateActivityHeading();
+ $('#session-label').textContent='실시간 독서 교실';$('#teacher-invite').textContent='';teacherMode=false;activeActivity='consonants';updateActivityHeading();
 }
 function hideActivities(){['student-view','teacher-view','catapult-view','raft-view','kwls-view'].forEach(id=>$('#'+id).hidden=true);}
 function renderSessionHeader(){
  const logged=Boolean(cloud.user);
+ $('#preview-open').hidden=cloud.profile?.role==='teacher'||cloud.profile?.role==='preview';
+ $('#invite-manage').hidden=cloud.profile?.role!=='teacher';$('#owner-preview').hidden=cloud.profile?.role!=='teacher';
+ $('#preview-bar').hidden=cloud.profile?.role!=='preview';
  $('#login-open').classList.toggle('hidden',logged);$('#user-profile').classList.toggle('hidden',!logged);
  $('#profile-name').textContent=logged?(cloud.profile?.name||cloud.user?.displayName||'계정 확인 중'):'';
- $('#profile-role').textContent=!logged?'':cloud.profile?.role==='teacher'?'교사':cloud.profile?'학생':'확인 중';
+ $('#profile-role').textContent=!logged?'':cloud.profile?.role==='teacher'?'교사':cloud.profile?.role==='preview'?'교사 살펴보기':cloud.profile?'학생':'확인 중';
  let fallback=$('#profile-initial');
  if(!fallback){fallback=element('span','profile-initial');fallback.id='profile-initial';fallback.setAttribute('aria-hidden','true');$('#user-profile').prepend(fallback);}
  fallback.textContent=logged?Array.from($('#profile-name').textContent)[0]:'';fallback.hidden=!logged;
@@ -423,6 +427,7 @@ function renderSessionHeader(){
  if(cloud.user?.photoURL?.startsWith('https://')){photo.src=cloud.user.photoURL;photo.referrerPolicy='no-referrer';photo.hidden=false;fallback.hidden=true;}
 }
 function renderClassBar(){
+ if(cloud.profile?.role==='preview'){$('#class-bar').hidden=true;return;}
  const teacher=cloud.profile?.role==='teacher';$('#class-bar').hidden=!cloud.profile;
  $('#class-select').hidden=!teacher;$('#class-bar label').hidden=!teacher;
  $('#new-class-open').hidden=!teacher;$('#copy-code').hidden=!teacher;$('#class-code').hidden=!teacher;
@@ -437,6 +442,7 @@ function updateActivityHeading(){
 }
 function paintActivities(){
  if(!cloud.ready)return;
+ if(cloud.profile?.role==='preview'){paintPreview();return;}
  $('#welcome-panel').hidden=true;$('#activity-workspace').hidden=false;hideActivities();
  $('#empty-class').hidden=students.length>0 || cloud.profile.role!=='teacher';
  updateActivityHeading();
@@ -448,6 +454,7 @@ function paintActivities(){
  changeMode(cloud.profile.role==='teacher');
 }
 function onCloudEvent(event){
+ if(event.type==='preview'){closeDialogs();clearSessionScreen();students.splice(0,students.length,...previewSamples());selectedStudent=students[0].id;previewTeacher=true;renderSessionHeader();renderClassBar();paintPreview();return;}
  // 복구는 제출 데이터를 덮어쓰지 않고 현재 학생의 작성 화면에만 적용합니다.
  if(event.type==='restore'){
   const s=students[0];if(!s)return;
@@ -517,5 +524,29 @@ $('#new-class-form').addEventListener('submit',event=>{event.preventDefault();wi
 $('#class-select').addEventListener('change',event=>selectClass(event.target.value).catch(showCloudError));
 $('#copy-code').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(cloud.classData.classCode);$('#copy-code').textContent='복사 완료!';setTimeout(()=>$('#copy-code').textContent='코드 복사',1800);}catch{$('#cloud-error').textContent='복사 권한이 없습니다. 표시된 코드를 선택해 복사해 주세요.';}});
 $('#retry-save').addEventListener('click',()=>retrySaves().catch(showCloudError));
+
+// 모든 예시는 가상의 학생 자료입니다. 실제 명부와 제출물을 조회하지 않습니다.
+function previewSamples(){
+ return ['가상 학생 가람','가상 학생 나래','가상 학생 다온'].map((name,i)=>({id:'preview-'+i,name,words:i===0?['인공지능','기술','로봇','미래','협력']:i===1?['인공지능','미래','생각']:['기술','미래','책'],notes:{covers:'표지의 로봇과 아이가 친구가 되는 이야기일 것 같다.',author:'과학 이야기를 쉽게 설명하는 작가의 다른 책도 찾아보고 싶다.',title:'AI와 사람이 함께 사는 미래를 예상해 보았다.',audience:'인공지능이 궁금한 친구에게 추천하고 싶다.',page:'로봇과 함께하는 하루라는 소제목이 궁금하다.',underlying:'기술을 책임 있게 사용하는 태도를 알려 주려는 것 같다.',reference:'과학 자료가 이야기의 근거를 보태 준다.',visuals:'사람과 로봇이 함께 일하는 그림이 눈에 띈다.'},raft:{role:'AI 기술자',audience:'미래의 어린이들',format:'편지글',topic:'사람을 돕는 인공지능',body:'미래의 어린이들에게,\n\n인공지능은 우리를 돕는 도구입니다. 편리함만큼 서로를 배려하는 마음도 중요하답니다. 기술이 누구에게 도움이 되는지 함께 질문해 주세요.\n\nAI 기술자가'},kwls:{know:'인공지능은 많은 자료에서 규칙을 배운다.',want:'인공지능은 사람의 마음도 이해할 수 있을까?',learned:'기술을 만드는 사람의 판단과 책임이 중요하다.',still:'모두에게 공정한 인공지능을 만들려면 어떻게 해야 할까?'}}));
+}
+function paintPreview(){
+ $('#welcome-panel').hidden=true;$('#activity-workspace').hidden=false;$('#class-bar').hidden=true;$('#empty-class').hidden=true;
+ $('#submit-activity').hidden=true;$('#draft-help').textContent='가상 자료 체험 · 입력한 내용은 저장·제출되지 않습니다.';
+ $('#cloud-save-status').textContent='';$('#retry-save').hidden=true;$('#session-label').textContent='교사용 살펴보기';
+ updateActivityHeading();hideActivities();teacherMode=previewTeacher;
+ $('#preview-student').setAttribute('aria-pressed',String(!previewTeacher));$('#preview-teacher').setAttribute('aria-pressed',String(previewTeacher));
+ if(!previewTeacher){$('#student-board-name').textContent='가상 학생의 닿소리 판';renderBoard();}
+ changeMode(previewTeacher);
+}
+function showPreviewEntry(){closeDialogs();if(!cloud.user){$('#login-dialog').showModal();return;}$('#preview-dialog').showModal();}
+$('#preview-open').addEventListener('click',showPreviewEntry);$('#join-preview').addEventListener('click',showPreviewEntry);
+$('#preview-code').addEventListener('input',e=>e.target.value=e.target.value.trim().toUpperCase());
+$('#preview-form').addEventListener('submit',e=>{e.preventDefault();withForm(e.currentTarget,'#preview-error',()=>redeemTeacherInvite($('#preview-code').value));});
+$('#invite-manage').addEventListener('click',async()=>{$('#invite-dialog').showModal();$('#invite-error').textContent='';$('#teacher-invite').textContent='불러오는 중…';try{$('#teacher-invite').textContent=await getTeacherInvite();}catch(e){$('#teacher-invite').textContent='';$('#invite-error').textContent=showCloudError(e);}});
+$('#invite-copy').addEventListener('click',async()=>{const code=$('#teacher-invite').textContent;if(!/^[A-HJ-NP-Z2-9]{12}$/.test(code))return;try{await navigator.clipboard.writeText(code);$('#invite-copy').textContent='복사 완료!';}catch{$('#invite-error').textContent='표시된 코드를 직접 선택해 복사해 주세요.';}});
+$('#owner-preview').addEventListener('click',startOwnerPreview);
+$('#preview-student').addEventListener('click',()=>{previewTeacher=false;paintPreview();});
+$('#preview-teacher').addEventListener('click',()=>{previewTeacher=true;paintPreview();});
+$('#preview-exit').addEventListener('click',()=>{if(cloud.previewOwner)leavePreview();else logoutCloud().catch(showCloudError);});
 hideActivities();startCloud(onCloudEvent);
 

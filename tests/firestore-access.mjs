@@ -74,5 +74,31 @@ for(const [activity,collection] of Object.entries({consonants:'consonant_submiss
  await check(activity+' final anonymous read denied',call('GET','/'+final),false);
  await check(activity+' final wrong class denied',commit(a,[write(final,{classId:'ZXCVBN',data},'data.updatedAt')]),false);
 }
+
+// 살펴보기 코드는 운영 학급 권한을 부여하지 않는지 검사합니다.
+const visitor=token('visitor','visitor@example.invalid',true),unverified=token('unverified');
+const hash='a'.repeat(64),wrongHash='b'.repeat(64);
+await check('preview visitor profile',commit(visitor,[write('users/visitor',user('visitor'))]));
+await check('preview unverified profile',commit(unverified,[write('users/unverified',user('unverified'))]));
+await check('preview invite owner creates atomically',commit(teacher,[write('previewInvites/'+hash,{createdBy:'teacher'}),write('system/previewInvitation',{code:'ABCDEFGHJKLM',hash})]));
+await check('preview invite anonymous denied',call('GET','/previewInvites/'+hash),false);
+await check('preview invite unverified denied',call('GET','/previewInvites/'+hash,unverified),false);
+await check('preview invitation plaintext private',call('GET','/system/previewInvitation',visitor),false);
+await check('preview invitations cannot enumerate',call('GET','/previewInvites',visitor),false);
+await check('preview invite verified lookup',call('GET','/previewInvites/'+hash,visitor));
+await check('preview visitor cannot mint invite',commit(visitor,[write('previewInvites/'+wrongHash,{createdBy:'visitor'})]),false);
+await check('preview wrong code denied',commit(visitor,[write('previewAccess/visitor',{inviteHash:wrongHash})]),false);
+await check('preview unverified redemption denied',commit(unverified,[write('previewAccess/unverified',{inviteHash:hash})]),false);
+await check('preview cannot redeem for another user',commit(visitor,[write('previewAccess/outsider',{inviteHash:hash})]),false);
+await check('preview joined student denied',commit(token('student-a','student-a@example.invalid',true),[write('previewAccess/student-a',{inviteHash:hash})]),false);
+await check('preview valid redemption',commit(visitor,[write('previewAccess/visitor',{inviteHash:hash})]));
+await check('preview own access persisted',call('GET','/previewAccess/visitor',visitor));
+await check('preview access peer denied',call('GET','/previewAccess/visitor',b),false);
+await check('preview cannot become teacher',commit(visitor,[write('users/visitor',user('visitor','teacher'))]),false);
+await check('preview cannot create real class',commit(visitor,[write('classes/PRVIEW',{...classroom,classCode:'PRVIEW',teacherUid:'visitor'})]),false);
+await check('preview cannot join real class',commit(visitor,[write('classes/BOOK26/students/visitor',{studentName:'visitor',email:'visitor@example.invalid'},'joinedAt'),write('users/visitor',user('visitor','student','BOOK26'))]),false);
+await check('preview cannot read roster',call('GET','/classes/BOOK26/students',visitor),false);
+for(const collection of Object.keys(submissions))await check('preview cannot read '+collection,call('GET','/classes/BOOK26/'+collection+'/student-a',visitor),false);
+await check('preview cannot write real submission',commit(visitor,[write('classes/BOOK26/raft_submissions/visitor',{...submissions.raft_submissions,studentName:'visitor'},'updatedAt')]),false);
 console.log('PASS '+checks+' access-control checks');
 

@@ -69,6 +69,26 @@ service cloud.firestore {
     member(request.resource.data.classId) && get(profilePath(uid)).data.role=='student' && validActivity(request.resource.data.data,uid,activity);
    allow delete: if false;
   }
+  // 코드 목록은 공개하지 않습니다. 검증된 계정만 정확한 해시로 초대를 확인합니다.
+  match /system/previewInvitation {
+   allow get: if teacher();
+   allow create: if teacher() && request.resource.data.keys().hasOnly(['code','hash']) &&
+    request.resource.data.code.matches('^[A-HJ-NP-Z2-9]{12}$') && request.resource.data.hash.matches('^[a-f0-9]{64}$') &&
+    getAfter(/databases/$(database)/documents/previewInvites/$(request.resource.data.hash)).data.createdBy==request.auth.uid;
+   allow update,delete,list: if false;
+  }
+  match /previewInvites/{hash} {
+   allow get: if signed() && request.auth.token.email_verified==true;
+   allow create: if teacher() && hash.matches('^[a-f0-9]{64}$') && request.resource.data.keys().hasOnly(['createdBy']) && request.resource.data.createdBy==request.auth.uid;
+   allow update,delete,list: if false;
+  }
+  match /previewAccess/{uid} {
+   allow get: if me(uid);
+   allow create: if me(uid) && request.auth.token.email_verified==true &&
+    getAfter(profilePath(uid)).data.classId=='' && request.resource.data.keys().hasOnly(['inviteHash']) &&
+    request.resource.data.inviteHash is string && exists(/databases/$(database)/documents/previewInvites/$(request.resource.data.inviteHash));
+   allow update,delete,list: if false;
+  }
   match /system/admin {
    allow get: if signed();
    // Bootstrap is bound to this project's owner. Verified email prevents password signup impersonation.
@@ -82,7 +102,7 @@ service cloud.firestore {
    allow get: if me(uid);
    allow create: if me(uid) && validUser(request.resource.data) && request.resource.data.classId=='';
    allow update: if me(uid) && validUser(request.resource.data) && request.resource.data.name==resource.data.name &&
-    (request.resource.data.classId==resource.data.classId || (resource.data.classId=='' && existsAfter(memberPath(request.resource.data.classId,uid))));
+    (request.resource.data.classId==resource.data.classId || (resource.data.classId=='' && !existsAfter(/databases/$(database)/documents/previewAccess/$(uid)) && existsAfter(memberPath(request.resource.data.classId,uid))));
    allow delete, list: if false;
   }
   match /classes/{cid} {

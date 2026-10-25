@@ -49,6 +49,9 @@ export function startCloud(callback){
   if(!user)return;
   try{
    const profile=await resolveProfile(user);if(epoch!==generation)return;cloud.profile=profile;message('profile');
+   const access=await getDoc(doc(db,'previewAccess',user.uid));
+   if(epoch!==generation)return;
+   if(profile.role!=='teacher' && access.exists()){openPreview();return;}
    if(profile.role==='teacher'){
     classListUnsubscribe=onSnapshot(query(collection(db,'classes'),where('teacherUid','==',user.uid)),snapshot=>{
      if(epoch!==generation)return;
@@ -185,7 +188,7 @@ export async function setActiveActivity(activity){
  await updateDoc(doc(db,'classes',cloud.classId),{activeActivity:activity});
 }
 export async function selectClass(id){
- if(!cloud.profile)return;
+ if(!cloud.profile || cloud.profile.role==='preview')return;
  if(cloud.profile.role==='student' && cloud.profile.classId!==id)throw safeError('소속된 클래스만 열 수 있습니다.');
  clearClassListeners();cloud.classId=id;const epoch=generation,scope=classGeneration;message('loading');
  const teacher=cloud.profile.role==='teacher',uid=cloud.user.uid;
@@ -224,4 +227,38 @@ export async function selectClass(id){
    loaded.add(activity);assemble();
   },failed));
  }
+}
+
+// 방문 교사 권한은 학급 관리자 역할과 분리합니다. 체험 중에는 DB 구독과 저장을 하지 않습니다.
+function openPreview(){
+ const owner=cloud.profile?.role==='teacher';
+ const profile={...cloud.profile,role:'preview'};
+ clearAll();cloud.previewOwner=owner;cloud.profile=profile;cloud.classId='preview';cloud.ready=true;
+ message('preview');
+}
+export function startOwnerPreview(){if(cloud.profile?.role==='teacher')openPreview();}
+export function leavePreview(){startCloud(notify);}
+const inviteHash=async code=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(code)))).map(n=>n.toString(16).padStart(2,'0')).join('');
+export async function getTeacherInvite(){
+ if(cloud.profile?.role!=='teacher')throw safeError('관리 교사만 초대 코드를 확인할 수 있습니다.');
+ const ref=doc(db,'system','previewInvitation');
+ const existing=await getDoc(ref);if(existing.exists())return existing.data().code;
+ const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+ const code=Array.from(crypto.getRandomValues(new Uint8Array(12)),n=>alphabet[n%32]).join('');
+ const hash=await inviteHash(code),uid=cloud.user.uid;
+ return runTransaction(db,async tx=>{
+  const found=await tx.get(ref);if(found.exists())return found.data().code;
+  tx.set(doc(db,'previewInvites',hash),{createdBy:uid});tx.set(ref,{code,hash});return code;
+ });
+}
+export async function redeemTeacherInvite(raw){
+ if(!cloud.user || !cloud.profile)throw safeError('먼저 로그인해 주세요.');
+ if(!cloud.user.emailVerified)throw safeError('Google로 로그인하거나 이메일 인증 후 다시 로그인해 주세요.');
+ if(cloud.profile.classId)throw safeError('학생 학급에 가입된 계정입니다. 별도의 교사 계정으로 로그인해 주세요.');
+ const code=raw.trim().toUpperCase();if(!/^[A-HJ-NP-Z2-9]{12}$/.test(code))throw safeError('교사용 12자리 초대 코드를 확인해 주세요.');
+ const epoch=generation,uid=cloud.user.uid,hash=await inviteHash(code);
+ const invite=await getDoc(doc(db,'previewInvites',hash));
+ if(!invite.exists())throw safeError('일치하는 교사용 코드가 없습니다. 코드를 확인해 주세요.');
+ await setDoc(doc(db,'previewAccess',uid),{inviteHash:hash});
+ if(epoch===generation && cloud.user?.uid===uid)openPreview();
 }

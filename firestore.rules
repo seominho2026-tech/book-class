@@ -1,0 +1,118 @@
+// Prototype rules: classes use their six-character invitation code as document ID.
+// Student document IDs are Firebase Auth UIDs; only class owners read whole rosters/submissions.
+rules_version = '2';
+// drafts: 기존 활동 스키마, 본인만 읽기/쓰기. activities: {classId, data}, data는 기존 활동 스키마.
+service cloud.firestore {
+ match /databases/{database}/documents {
+  function signed() { return request.auth != null; }
+  function me(uid) { return signed() && request.auth.uid == uid; }
+  function text(value, maximum) { return value is string && value.size() <= maximum; }
+  function adminPath() { return /databases/$(database)/documents/system/admin; }
+  function profilePath(uid) { return /databases/$(database)/documents/users/$(uid); }
+  function classPath(cid) { return /databases/$(database)/documents/classes/$(cid); }
+  function memberPath(cid, uid) { return /databases/$(database)/documents/classes/$(cid)/students/$(uid); }
+  function teacher() {
+   let a = getAfter(adminPath()).data;
+   return signed() && (a.adminTeacherUid == request.auth.uid ||
+    (request.auth.token.email_verified == true && a.adminTeacherEmail == request.auth.token.email.lower()));
+  }
+  function owner(cid) { return signed() && get(classPath(cid)).data.teacherUid == request.auth.uid; }
+  function member(cid) { return signed() && exists(memberPath(cid, request.auth.uid)) && get(profilePath(request.auth.uid)).data.classId == cid; }
+  function validUser(d) {
+   return d.keys().hasAll(['email','name','role','classId']) && d.keys().hasOnly(['email','name','role','classId']) &&
+    text(d.email,254) && d.email == request.auth.token.email && text(d.name,60) && d.name.size()>0 &&
+    d.role in ['teacher','student'] && text(d.classId,6) && (d.classId == '' || d.classId.matches('^[A-Z0-9]{6}$')) &&
+    ((d.role=='teacher' && teacher()) || (d.role=='student' && !teacher()));
+  }
+  function validClass(d,cid) {
+   return d.keys().hasAll(['className','classCode','teacherUid','activeActivity']) && d.keys().hasOnly(['className','classCode','teacherUid','activeActivity']) &&
+    text(d.className,80) && d.className.size()>0 && d.classCode==cid && cid.matches('^[A-Z0-9]{6}$') &&
+    d.teacherUid==request.auth.uid && d.activeActivity in ['act-1','act-2','act-3','act-4'];
+  }
+  function validMember(d,uid,cid) {
+   let u = getAfter(profilePath(uid)).data;
+   return d.keys().hasAll(['studentName','email','joinedAt']) && d.keys().hasOnly(['studentName','email','joinedAt']) &&
+    text(d.studentName,60) && d.studentName==u.name && text(d.email,254) && d.email==request.auth.token.email &&
+    d.joinedAt==request.time && u.role=='student' && u.classId==cid;
+  }
+  function validBase(d,uid) { return text(d.studentName,60) && d.studentName==get(profilePath(uid)).data.name && d.updatedAt==request.time; }
+  function words(v) { return v is list && v.size()<=200 && v.join('').size()<=4000; }
+  function validBoard(d,uid) {
+   let b=d.board;
+   return d.keys().hasAll(['studentName','board','updatedAt']) && d.keys().hasOnly(['studentName','board','updatedAt']) && validBase(d,uid) && b is map &&
+    b.keys().hasAll(['ㄱ','ㄴ','ㄷ','ㄹ','ㅁ','ㅂ','ㅅ','ㅇ','ㅈ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ']) && b.keys().size()==14 &&
+    words(b['ㄱ']) && words(b['ㄴ']) && words(b['ㄷ']) && words(b['ㄹ']) && words(b['ㅁ']) && words(b['ㅂ']) && words(b['ㅅ']) &&
+    words(b['ㅇ']) && words(b['ㅈ']) && words(b['ㅊ']) && words(b['ㅋ']) && words(b['ㅌ']) && words(b['ㅍ']) && words(b['ㅎ']);
+  }
+  function validParatext(d,uid) {
+   let c=d.cards;
+   return d.keys().hasAll(['studentName','cards','updatedAt']) && d.keys().hasOnly(['studentName','cards','updatedAt']) && validBase(d,uid) && c is map &&
+    c.keys().hasAll(['covers','author','title','audience','page','underlying','reference','visuals']) && c.keys().size()==8 &&
+    text(c.covers,2000) && text(c.author,2000) && text(c.title,2000) && text(c.audience,2000) && text(c.page,2000) && text(c.underlying,2000) && text(c.reference,2000) && text(c.visuals,2000);
+  }
+  function validRaft(d,uid) {
+   return d.keys().hasAll(['studentName','role','audience','format','topic','content','updatedAt']) && d.keys().hasOnly(['studentName','role','audience','format','topic','content','updatedAt']) && validBase(d,uid) &&
+    text(d.role,150) && text(d.audience,150) && text(d.format,150) && text(d.topic,150) && text(d.content,20000);
+  }
+  function validKwls(d,uid) {
+   let c=d.cards;
+   return d.keys().hasAll(['studentName','cards','updatedAt']) && d.keys().hasOnly(['studentName','cards','updatedAt']) && validBase(d,uid) && c is map &&
+    c.keys().hasAll(['know','want','learned','still']) && c.keys().size()==4 && text(c.know,3000) && text(c.want,3000) && text(c.learned,3000) && text(c.still,3000);
+  }
+  function validActivity(d,uid,activity) {
+   return (activity=='consonants' && validBoard(d,uid)) || (activity=='catapult' && validParatext(d,uid)) ||
+    (activity=='raft' && validRaft(d,uid)) || (activity=='kwls' && validKwls(d,uid));
+  }
+  match /students/{uid}/activities/{activity} {
+   allow read: if me(uid) || (signed() && owner(resource.data.classId));
+   allow create,update: if me(uid) && request.resource.data.keys().hasAll(['classId','data']) && request.resource.data.keys().hasOnly(['classId','data']) &&
+    member(request.resource.data.classId) && get(profilePath(uid)).data.role=='student' && validActivity(request.resource.data.data,uid,activity);
+   allow delete: if false;
+  }
+  match /system/admin {
+   allow get: if signed();
+   // Bootstrap is bound to this project's owner. Verified email prevents password signup impersonation.
+   allow create: if signed() && request.auth.token.email_verified==true && request.auth.token.email.lower()=='seominho2026@gmail.com' &&
+    request.resource.data.keys().hasAll(['adminTeacherUid','adminTeacherEmail']) && request.resource.data.keys().hasOnly(['adminTeacherUid','adminTeacherEmail']) &&
+    request.resource.data.adminTeacherUid==request.auth.uid && request.resource.data.adminTeacherEmail==request.auth.token.email.lower() &&
+    getAfter(classPath('BOOK26')).data.teacherUid==request.auth.uid && getAfter(profilePath(request.auth.uid)).data.role=='teacher';
+   allow update, delete, list: if false;
+  }
+  match /users/{uid} {
+   allow get: if me(uid);
+   allow create: if me(uid) && validUser(request.resource.data) && request.resource.data.classId=='';
+   allow update: if me(uid) && validUser(request.resource.data) && request.resource.data.name==resource.data.name &&
+    (request.resource.data.classId==resource.data.classId || (resource.data.classId=='' && existsAfter(memberPath(request.resource.data.classId,uid))));
+   allow delete, list: if false;
+  }
+  match /classes/{cid} {
+   // Exact invitation lookup only. Students cannot enumerate classes.
+   allow get: if signed();
+   allow list: if signed() && resource.data.teacherUid==request.auth.uid;
+   allow create: if signed() && teacher() && validClass(request.resource.data,cid);
+   allow update: if owner(cid) && teacher() && validClass(request.resource.data,cid) && request.resource.data.teacherUid==resource.data.teacherUid && request.resource.data.classCode==resource.data.classCode;
+   allow delete: if false;
+   match /students/{uid} {
+    match /drafts/{activity} {
+     allow read: if me(uid) && member(cid);
+     allow create,update: if me(uid) && member(cid) && get(profilePath(uid)).data.role=='student' && validActivity(request.resource.data,uid,activity);
+     allow delete: if false;
+    }
+    allow get: if owner(cid) || me(uid);
+    allow list: if owner(cid);
+    allow create: if me(uid) && exists(classPath(cid)) && validMember(request.resource.data,uid,cid);
+    allow update,delete: if false;
+   }
+   match /{submission}/{uid} {
+    allow get: if submission in ['consonant_submissions','paratext_submissions','raft_submissions','kwls_submissions'] && (owner(cid) || (me(uid) && member(cid)));
+    allow list: if submission in ['consonant_submissions','paratext_submissions','raft_submissions','kwls_submissions'] && owner(cid);
+    allow create,update: if me(uid) && member(cid) && get(profilePath(uid)).data.role=='student' &&
+     ((submission=='consonant_submissions' && validBoard(request.resource.data,uid)) ||
+      (submission=='paratext_submissions' && validParatext(request.resource.data,uid)) ||
+      (submission=='raft_submissions' && validRaft(request.resource.data,uid)) ||
+      (submission=='kwls_submissions' && validKwls(request.resource.data,uid)));
+    allow delete: if false;
+   }
+  }
+ }
+}

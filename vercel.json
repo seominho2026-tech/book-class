@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "buildCommand": "",
+  "installCommand": "",
+  "outputDirectory": ".",
+  "routes": [
+    { "src": "/(.*)", "headers": { "X-Content-Type-Options": "nosniff", "X-Frame-Options": "DENY", "Referrer-Policy": "strict-origin-when-cross-origin", "Cache-Control": "no-cache" }, "continue": true },
+    { "src": "/", "dest": "/index.html" },
+    { "src": "/(index\\.html|styles\\.css|app\\.js|firebase-service\\.js|firebase-config\\.js|draft-storage\\.js)", "dest": "/$1" },
+    { "src": "/(.*)", "status": 404 }
+  ]
+}

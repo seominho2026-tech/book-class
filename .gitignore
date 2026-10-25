@@ -1,0 +1,7 @@
+.env*
+!.env.example
+.vercel/
+.firebase/
+*debug.log
+node_modules/
+.private/

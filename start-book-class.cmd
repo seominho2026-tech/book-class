@@ -1,0 +1,4 @@
+@echo off
+cd /d "%~dp0"
+powershell.exe -NoProfile -Command "$ErrorActionPreference='Stop'; $listener=Get-NetTCPConnection -LocalPort 8018 -State Listen -ErrorAction SilentlyContinue; if(-not $listener){$nodePath=(Get-Command node.exe -ErrorAction Stop).Source; Start-Process -FilePath $nodePath -ArgumentList 'dev-server.cjs' -WorkingDirectory (Get-Location).Path -WindowStyle Hidden}; $ready=$false; for($attempt=0;$attempt -lt 20;$attempt++){try{$page=Invoke-WebRequest 'http://127.0.0.1:8018/' -UseBasicParsing -TimeoutSec 2; if($page.StatusCode -eq 200 -and $page.Content.Contains('book-class')){$ready=$true; break}}catch{}; Start-Sleep -Milliseconds 300}; if(-not $ready){throw 'book-class server did not start. Check Node.js and port 8018.'}; Start-Process 'http://127.0.0.1:8018/'"
+if errorlevel 1 pause

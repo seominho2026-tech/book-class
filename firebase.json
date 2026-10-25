@@ -1,0 +1,8 @@
+{
+  "firestore": { "rules": "firestore.rules" },
+  "auth": {
+    "authorizedDomains": ["localhost", "127.0.0.1", "book-class-f5d7f.firebaseapp.com", "book-class-f5d7f.web.app"],
+    "providers": { "emailPassword": true, "googleSignIn": { "oAuthBrandDisplayName": "book-class", "supportEmail": "seominho2026@gmail.com" } }
+  },
+  "emulators": { "auth": { "port": 9099 }, "firestore": { "port": 8080 }, "ui": { "enabled": false }, "singleProjectMode": true }
+}

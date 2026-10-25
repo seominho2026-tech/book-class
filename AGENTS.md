@@ -1,0 +1,12 @@
+# book-class 프로젝트 식별 정보
+- 작업 프로젝트: book-class
+- Firebase projectId: book-class-f5d7f
+- Firebase Web appId: 1:681923464310:web:1784dae729f03e102e6357
+- Firestore: (default), Standard, asia-northeast3 (서울)
+- GitHub 저장소: https://github.com/seominho2026-tech/book-class (비공개)
+- Supabase: 사용하지 않음
+- Vercel: smh-s-projects 팀에 book-class 배포 준비 중 (team_jWOKc9uPTAoRFeZxYePdneO3)
+- HTML/CSS/JS 정적 배포. npm 설치나 앱 빌드 단계 없음.
+- 비밀 인증 자료, .env, .private, 디버그 로그를 Git에 포함하지 말 것.
+- firebase-config.js는 브라우저용 공개 연결 정보. 관리자 비밀 키를 넣지 말 것.
+- 최초 관리자 등록은 인증된 프로젝트 소유자 이메일로 제한. 학생 역할은 서버 보안 규칙이 검증.

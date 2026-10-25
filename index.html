@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>book-class · 창의적 독서 활동</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+<link rel="stylesheet" href="styles.css">
+<script type="module" src="app.js"></script>
+</head>
+<body>
+<header class="site-header"><div class="container header-inner"><h1 class="service-name">book-class<span>생각이 자라는 독서 교실</span></h1><div id="auth-header"><button id="login-open" class="primary">로그인</button><div id="user-profile" class="hidden"><img id="profile-photo" alt="" hidden><span id="profile-name"></span><span id="profile-role" class="role-badge"></span><button id="logout-button">로그아웃</button></div></div></div></header>
+<main class="container">
+<p id="cloud-error" class="error-banner" role="alert"></p><div id="cloud-save-bar"><small id="cloud-save-status" role="status" aria-live="polite"></small><button id="retry-save" hidden>저장 다시 시도</button></div>
+<section id="welcome-panel" class="welcome-panel"><h2>함께 읽고, 생각을 나누는 교실</h2><p id="welcome-message">로그인하면 나의 독서 활동을 저장하고 이어갈 수 있어요.</p><button id="welcome-login" class="primary">로그인하고 시작하기</button><button id="join-open" hidden>클래스 코드 입력</button></section>
+<div id="class-bar" class="class-bar" hidden><label for="class-select">독서 클래스</label><select id="class-select"></select><strong id="class-name"></strong><span id="class-code" class="class-code"></span><button id="copy-code">코드 복사</button><button id="new-class-open">+ 새 클래스 만들기</button></div>
+<p id="empty-class" class="welcome-panel" hidden>아직 입장한 학생이 없습니다. 초대 코드를 학생에게 알려 주세요.</p>
+<div id="activity-workspace" hidden>
+<div class="section-line"><small id="draft-help">입력을 멈추면 1초 후 임시 저장됩니다. 교사에게 보내려면 현재 활동을 제출하세요.</small><button id="submit-activity" class="primary" hidden>현재 활동 최종 제출</button></div>
+<nav class="activity-nav" aria-label="독서 활동 선택"><button data-activity="consonants" aria-pressed="true">1. 닿소리 채우기</button><button data-activity="catapult" aria-pressed="false">2. 곁텍스트 읽기</button><button data-activity="raft" aria-pressed="false">3. RAFT 전략 글쓰기</button><button data-activity="kwls" aria-pressed="false">4. KWLS 성찰하기</button></nav>
+<div class="intro"><div><h2 id="activity-title">1. 닿소리 채우기</h2><p id="activity-description">책에서 만난 생각을, 열네 개의 닿소리에 담아 보세요.</p></div><span class="demo-label" id="session-label">실시간 독서 교실</span></div>
+<section id="student-view" aria-label="학생 활동">
+<div class="section-line"><strong id="student-board-name">나의 닿소리 판</strong><span id="progress"></span></div>
+<form id="word-form" class="word-form"><label for="word-input">떠오르는 낱말</label><div class="input-row"><input id="word-input" maxlength="20" placeholder="예: 인공지능, 기술, 로봇" autocomplete="off" required><button class="primary" type="submit">+ 단어 채우기</button></div><p class="hint">한글로 시작하는 낱말을 하나씩 입력해 주세요. 쌍자음은 기본 자음에 모아요.</p></form>
+<p id="status" role="status" aria-live="polite"></p><div id="consonant-board" class="board"></div>
+</section>
+<section id="teacher-view" aria-label="교사 대시보드" hidden>
+<div class="section-line"><strong>우리 반의 생각 모음</strong><span id="class-summary"></span></div>
+<div class="tabs" role="tablist" aria-label="제출물 보기"><button id="tab-individual" role="tab" aria-controls="teacher-panel" aria-selected="false" tabindex="-1" data-view="individual">개별 보기</button><button id="tab-all" role="tab" aria-controls="teacher-panel" aria-selected="false" tabindex="-1" data-view="all">전체 모아보기</button><button id="tab-cloud" role="tab" aria-controls="teacher-panel" aria-selected="true" data-view="cloud">워드 클라우드</button></div>
+<div id="teacher-panel" role="tabpanel" aria-labelledby="tab-cloud"><div id="teacher-content"></div></div>
+</section>
+<section id="catapult-view" aria-labelledby="activity-title" hidden>
+  <div id="catapult-student-picker" class="student-picker" hidden><label for="catapult-select">학생 선택</label><select id="catapult-select"></select></div>
+  <div class="catapult-summary"><div><h3 id="catapult-student-name"></h3><p>가상 도서 · AI와 함께 살아갈 미래</p></div><span id="catapult-progress" class="completion-badge" role="status" aria-live="polite"></span></div>
+  <p id="catapult-help" class="catapult-help"></p>
+  <p id="catapult-save-status" class="save-status" role="status"></p>
+  <div id="catapult-cards" class="catapult-grid"></div>
+</section>
+<section id="raft-view" aria-labelledby="activity-title" hidden>
+  <div id="raft-student-picker" class="student-picker" hidden><label for="raft-select">학생 선택</label><select id="raft-select"></select></div>
+  <div class="section-line"><strong id="raft-student-name"></strong><span>가상 도서 · AI와 함께 살아갈 미래</span></div>
+  <p id="raft-sentence" class="raft-band" aria-live="polite" aria-atomic="true"></p>
+  <p id="raft-save-status" class="save-status" role="status"></p>
+  <div id="raft-conditions" class="raft-grid"></div>
+  <div id="raft-writing"></div>
+</section>
+<section id="kwls-view" aria-labelledby="activity-title" hidden>
+  <div id="kwls-class-stats" class="kwls-stats" hidden></div>
+  <div id="kwls-student-picker" class="student-picker" hidden><label for="kwls-select">학생 선택</label><select id="kwls-select"></select></div>
+  <div class="catapult-summary"><div><h3 id="kwls-student-name"></h3><p>가상 도서 · AI와 함께 살아갈 미래</p></div><span id="kwls-progress" class="completion-badge" role="status" aria-live="polite"></span></div>
+  <p class="catapult-help">읽기 전의 생각에서 읽은 후의 새로운 질문까지, 나의 생각이 자란 과정을 기록해 보세요.</p>
+  <p id="kwls-save-status" class="save-status" role="status"></p>
+  <div id="kwls-cards" class="kwls-grid"></div>
+</section>
+</div><footer>가상 도서 · AI와 함께 살아갈 미래 <span>로그인한 계정과 학급에 활동을 저장해요.</span></footer>
+</main>
+<dialog id="word-dialog" aria-labelledby="dialog-title"><div class="dialog-header"><h2 id="dialog-title"></h2><button id="close-dialog" aria-label="닫기">×</button></div><div id="dialog-body"></div></dialog>
+<dialog id="login-dialog" aria-labelledby="login-title"><div class="dialog-header"><h2 id="login-title">독서 교실 로그인</h2><button data-close="login-dialog" aria-label="닫기">×</button></div><button id="google-login" class="google-login">Google 계정으로 로그인</button><p class="login-divider">또는 이메일로 시작하기</p><form id="email-form" class="auth-form"><label for="signup-name" id="signup-name-label" hidden>이름</label><input id="signup-name" maxlength="60" autocomplete="name" hidden><label for="login-email">이메일</label><input id="login-email" type="email" autocomplete="username" required maxlength="254"><label for="login-password">비밀번호</label><input id="login-password" type="password" minlength="6" maxlength="128" autocomplete="current-password" required><p id="login-error" class="error-banner" role="alert"></p><button id="email-submit" class="primary" type="submit">로그인</button><button id="toggle-signup" type="button">처음이라면 회원가입</button></form></dialog>
+<dialog id="join-dialog" aria-labelledby="join-title"><div class="dialog-header"><h2 id="join-title">독서 클래스 입장</h2><button data-close="join-dialog" aria-label="닫기">×</button></div><form id="join-form" class="auth-form"><label for="join-code">선생님이 알려 준 6자리 코드</label><input id="join-code" class="code-input" maxlength="12" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="BOOK26" required><p id="join-error" class="error-banner" role="alert"></p><button class="primary" type="submit">클래스 입장</button></form></dialog>
+<dialog id="new-class-dialog" aria-labelledby="new-class-title"><div class="dialog-header"><h2 id="new-class-title">새 클래스 만들기</h2><button data-close="new-class-dialog" aria-label="닫기">×</button></div><form id="new-class-form" class="auth-form"><label for="new-class-name">학급 이름</label><input id="new-class-name" maxlength="80" placeholder="6학년 2반 온작품 읽기반" required><p id="new-class-error" class="error-banner" role="alert"></p><button class="primary" type="submit">만들기</button></form></dialog>
+</body></html>

@@ -1,0 +1,2 @@
+// Public Firebase web configuration. Never put admin credentials here.
+export const firebaseConfig = {"projectId":"book-class-f5d7f","appId":"1:681923464310:web:1784dae729f03e102e6357","storageBucket":"book-class-f5d7f.firebasestorage.app","apiKey":"AIzaSyCsnFpBz4kInTCteXuL170UPGrDMbRYUgA","authDomain":"book-class-f5d7f.firebaseapp.com","messagingSenderId":"681923464310","measurementId":"G-VPMYVED59J","projectNumber":"681923464310","version":"2"};

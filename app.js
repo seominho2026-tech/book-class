@@ -413,6 +413,7 @@ function clearSessionScreen(){
 function hideActivities(){['student-view','teacher-view','catapult-view','raft-view','kwls-view'].forEach(id=>$('#'+id).hidden=true);}
 function renderSessionHeader(){
  const logged=Boolean(cloud.user);
+ document.querySelector('footer span').textContent=cloud.profile?.role==='preview'?'가상 자료 체험 · 저장·제출되지 않습니다.':'로그인한 계정과 학급에 활동을 저장해요.';
  $('#preview-open').hidden=cloud.profile?.role==='teacher'||cloud.profile?.role==='preview';
  $('#invite-manage').hidden=cloud.profile?.role!=='teacher';$('#owner-preview').hidden=cloud.profile?.role!=='teacher';
  $('#preview-bar').hidden=cloud.profile?.role!=='preview';

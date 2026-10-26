@@ -381,6 +381,8 @@ $("#kwls-select").addEventListener("change",event=>{selectedStudent=event.target
 const activityToId={consonants:'act-1',catapult:'act-2',raft:'act-3',kwls:'act-4'};
 const idToActivity=Object.fromEntries(Object.entries(activityToId).map(([key,value])=>[value,key]));
 let hydrated=false,signupMode=false,previewTeacher=true;
+// 교사용 입장 의도와 코드는 로그인 중에만 메모리에 보관합니다.
+let previewEntryRequested=false,pendingPreviewCode='';
 const dirtyActivities=new Set();
 function showCloudError(error){
  const messages={'permission-denied':'접근 권한이 없습니다. 학급과 보안 규칙을 확인해 주세요.','auth/invalid-credential':'이메일 또는 비밀번호를 확인해 주세요.','auth/invalid-login-credentials':'이메일 또는 비밀번호를 확인해 주세요.','auth/email-already-in-use':'이미 가입한 이메일입니다. 로그인해 주세요.','auth/weak-password':'비밀번호는 6자 이상으로 입력해 주세요.','auth/popup-blocked':'팝업이 차단되었습니다. 이 사이트의 팝업을 허용해 주세요.','auth/popup-closed-by-user':'로그인 창이 닫혔습니다. 다시 시도해 주세요.','auth/unauthorized-domain':'Firebase 인증의 허용 도메인에 이 사이트를 등록해 주세요.','auth/operation-not-allowed':'Firebase 콘솔에서 해당 로그인 방식을 활성화해 주세요.','auth/too-many-requests':'요청이 많습니다. 잠시 후 다시 시도해 주세요.'};
@@ -455,7 +457,7 @@ function paintActivities(){
  changeMode(cloud.profile.role==='teacher');
 }
 function onCloudEvent(event){
- if(event.type==='preview'){closeDialogs();clearSessionScreen();students.splice(0,students.length,...previewSamples());selectedStudent=students[0].id;previewTeacher=true;renderSessionHeader();renderClassBar();paintPreview();return;}
+ if(event.type==='preview'){previewEntryRequested=false;pendingPreviewCode='';closeDialogs();clearSessionScreen();students.splice(0,students.length,...previewSamples());selectedStudent=students[0].id;previewTeacher=true;renderSessionHeader();renderClassBar();paintPreview();return;}
  // 복구는 제출 데이터를 덮어쓰지 않고 현재 학생의 작성 화면에만 적용합니다.
  if(event.type==='restore'){
   const s=students[0];if(!s)return;
@@ -477,9 +479,9 @@ function onCloudEvent(event){
   $('#welcome-login').hidden=Boolean(cloud.user);$('#welcome-message').textContent=cloud.user?'계정을 확인하고 있습니다…':'로그인하면 독서 활동을 저장하고 이어갈 수 있어요.';
   $('#cloud-error').textContent='';$('#cloud-save-status').textContent='';$('#retry-save').hidden=true;renderSessionHeader();return;
  }
- if(event.type==='profile'){closeDialogs();renderSessionHeader();renderClassBar();return;}
+ if(event.type==='profile'){closeDialogs();renderSessionHeader();renderClassBar();if(previewEntryRequested)showPreviewEntry();return;}
  if(event.type==='classes'){renderClassBar();return;}
- if(event.type==='join-required'){$('#welcome-message').textContent='선생님이 알려 준 클래스 코드로 입장해 주세요.';$('#join-open').hidden=false;$('#join-dialog').showModal();return;}
+ if(event.type==='join-required'){$('#welcome-message').textContent='학생은 학급 코드, 방문 교사는 교사용 초대 코드로 입장해 주세요.';$('#join-open').hidden=false;if(previewEntryRequested)showPreviewEntry();else $('#join-dialog').showModal();return;}
  if(event.type==='loading'){hydrated=false;students.splice(0);hideActivities();$('#activity-workspace').hidden=true;$('#empty-class').hidden=true;$('#welcome-panel').hidden=false;$('#welcome-message').textContent='학급 활동을 불러오고 있습니다…';return;}
  if(event.type==='class'){
   renderClassBar();
@@ -539,10 +541,22 @@ function paintPreview(){
  if(!previewTeacher){$('#student-board-name').textContent='가상 학생의 닿소리 판';renderBoard();}
  changeMode(previewTeacher);
 }
-function showPreviewEntry(){closeDialogs();if(!cloud.user){$('#login-dialog').showModal();return;}$('#preview-dialog').showModal();}
+function showPreviewEntry(){
+ previewEntryRequested=true;closeDialogs();
+ $('#preview-code').value=pendingPreviewCode;
+ $('#preview-submit').textContent=cloud.user?'살펴보기 시작':'로그인하고 코드 확인';
+ $('#preview-auth-help').textContent=cloud.user?'교사용 12자리 코드를 입력한 뒤 살펴보기를 시작하세요.':'코드를 먼저 입력하세요. 다음 단계에서 로그인한 뒤 이 화면으로 돌아옵니다.';
+ $('#preview-dialog').showModal();
+}
 $('#preview-open').addEventListener('click',showPreviewEntry);$('#join-preview').addEventListener('click',showPreviewEntry);
 $('#preview-code').addEventListener('input',e=>e.target.value=e.target.value.trim().toUpperCase());
-$('#preview-form').addEventListener('submit',e=>{e.preventDefault();withForm(e.currentTarget,'#preview-error',()=>redeemTeacherInvite($('#preview-code').value));});
+$('#preview-form').addEventListener('submit',e=>{
+ e.preventDefault();pendingPreviewCode=$('#preview-code').value.trim().toUpperCase();
+ if(!cloud.user){closeDialogs();$('#login-dialog').showModal();return;}
+ withForm(e.currentTarget,'#preview-error',async()=>{await redeemTeacherInvite(pendingPreviewCode);previewEntryRequested=false;pendingPreviewCode='';});
+});
+$('#preview-dialog').addEventListener('cancel',()=>{previewEntryRequested=false;pendingPreviewCode='';});
+document.querySelector('[data-close="preview-dialog"]').addEventListener('click',()=>{previewEntryRequested=false;pendingPreviewCode='';});
 $('#invite-manage').addEventListener('click',async()=>{$('#invite-dialog').showModal();$('#invite-error').textContent='';$('#teacher-invite').textContent='불러오는 중…';try{$('#teacher-invite').textContent=await getTeacherInvite();}catch(e){$('#teacher-invite').textContent='';$('#invite-error').textContent=showCloudError(e);}});
 $('#invite-copy').addEventListener('click',async()=>{const code=$('#teacher-invite').textContent;if(!/^[A-HJ-NP-Z2-9]{12}$/.test(code))return;try{await navigator.clipboard.writeText(code);$('#invite-copy').textContent='복사 완료!';}catch{$('#invite-error').textContent='표시된 코드를 직접 선택해 복사해 주세요.';}});
 $('#owner-preview').addEventListener('click',startOwnerPreview);
